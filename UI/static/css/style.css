@@ -3,20 +3,16 @@ body {
     margin: 20px;
 }
 
-h1, h2 {
+h1,
+h2 {
     color: #333;
 }
 
 label {
+    color: #333;
     display: block;
+    font-size: 14px;
     margin-top: 10px;
-}
-
-input, textarea {
-    display: block;
-    margin-bottom: 10px;
-    width: 100%;
-    max-width: 600px;
 }
 
 textarea {
@@ -25,14 +21,6 @@ textarea {
 
 #agents-container {
     margin-top: 20px;
-}
-
-button {
-    display: block;
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
 }
 
 #output {
