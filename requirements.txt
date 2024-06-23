@@ -1,0 +1,6 @@
+Flask==2.0.1
+Werkzeug==2.0.1
+pandas
+fpdf2
+python-dotenv
+requests

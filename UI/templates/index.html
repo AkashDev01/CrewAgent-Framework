@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Crew Agent Framework</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Crew Agent Framework</h1>
+    <div>
+        <label for="crew-role">Role of the Crew:</label>
+        <input type="text" id="crew-role" name="crew-role">
+    </div>
+    <div id="agents-container">
+        <h2>Agents</h2>
+        <div class="agent" id="agent-1">
+            <label for="agent-role-1">Role of Agent:</label>
+            <input type="text" id="agent-role-1" name="agent-role">
+            <label for="agent-output-1">Output Expected:</label>
+            <input type="text" id="agent-output-1" name="agent-output">
+        </div>
+    </div>
+    <button id="add-agent">Add Agent</button>
+    <div>
+        <label for="crew-purpose">What is the Crew for?</label>
+        <textarea id="crew-purpose" name="crew-purpose" rows="4" cols="50"></textarea>
+    </div>
+    <button id="generate-output">Generate Output</button>
+    <div id="output">
+        <h2>Crew Output</h2>
+        <a id="download-pdf" href="#" style="display: none;">Download PDF</a>
+    </div>
+    <script>
+        let agentCount = 1;
+
+        $(document).ready(function() {
+            $('#add-agent').click(function() {
+                agentCount++;
+                $('#agents-container').append(`
+                    <div class="agent" id="agent-${agentCount}">
+                        <label for="agent-role-${agentCount}">Role of Agent:</label>
+                        <input type="text" id="agent-role-${agentCount}" name="agent-role">
+                        <label for="agent-output-${agentCount}">Output Expected:</label>
+                        <input type="text" id="agent-output-${agentCount}" name="agent-output">
+                    </div>
+                `);
+            });
+
+            $('#agents-container').on('focusout', '.agent input', function() {
+                const role = $(this).closest('.agent').find('input[name="agent-role"]').val();
+                const output = $(this).closest('.agent').find('input[name="agent-output"]').val();
+
+                if (role && output) {
+                    $.ajax({
+                        url: '/add_agent',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ role, output }),
+                        success: function(response) {
+                            alert(response.message);
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Error adding agent: ' + xhr.responseText);
+                        }
+                    });
+                }
+            });
+
+            $('#generate-output').click(function() {
+                const crewRole = $('#crew-role').val();
+                const crewPurpose = $('#crew-purpose').val();
+                const agents = [];
+
+                for (let i = 1; i <= agentCount; i++) {
+                    const role = $(`#agent-role-${i}`).val();
+                    const output = $(`#agent-output-${i}`).val();
+                    agents.push({ role, output });
+                }
+
+                $.ajax({
+                    url: '/generate_output',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ crewRole, crewPurpose, agents }),
+                    success: function(response) {
+                        $('#download-pdf').attr('href', response.pdf_url).show();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
