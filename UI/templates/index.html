@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@trimbleinc/modus-bootstrap@1.6.3/dist/modus.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
@@ -15,7 +14,7 @@
     <div class="container">
         <h1 class="text-center">Crew Agent Framework</h1>
         <div class="form-group">
-            <label for="crew-role">Role of the Crew:</label>
+            <label for="crew-role">Title of the Crew:</label>
             <input class="form-control" type="text" id="crew-role" name="crew-role">
         </div>
         <div class="form-group">
@@ -50,11 +49,11 @@
             $('#add-agent').click(function () {
                 agentCount++;
                 $('#agents-table tbody').append(`
-                    <tr id="agent-${agentCount}">
+                    <tr id="agent-${agentCount}" class="agent">
                         <td>${agentCount}</td>
                         <td><input class="form-control agent-input" type="text" id="agent-role-${agentCount}" name="agent-role"></td>
                         <td><input class="form-control agent-input" type="text" id="agent-output-${agentCount}" name="agent-output"></td>
-                        <td><button class="btn btn-secondary edit-agent" id="edit-agent-${agentCount}" disabled>Save</button></td>
+                        <td><button class="btn btn-secondary save-agent" id="save-agent-${agentCount}" disabled>Save</button></td>
                     </tr>
                 `);
 
@@ -62,80 +61,56 @@
                     let roleInput = $(`#agent-role-${agentCount}`).val();
                     let outputInput = $(`#agent-output-${agentCount}`).val();
                     if (roleInput && outputInput) {
-                        $(`#edit-agent-${agentCount}`).prop('disabled', false);
+                        $(`#save-agent-${agentCount}`).prop('disabled', false);
                     } else {
-                        $(`#edit-agent-${agentCount}`).prop('disabled', true);
+                        $(`#save-agent-${agentCount}`).prop('disabled', true);
                     }
                 });
 
-                $(`#edit-agent-${agentCount}`).click(function () {
-                    let roleInput = $(`#agent-role-${agentCount}`);
-                    let outputInput = $(`#agent-output-${agentCount}`);
-                    let editButton = $(this);
-
-                    if (editButton.text() === 'Save') {
-                        roleInput.prop('readonly', true);
-                        outputInput.prop('readonly', true);
-                        editButton.text('Edit');
-                    } else {
-                        roleInput.prop('readonly', false);
-                        outputInput.prop('readonly', false);
-                        editButton.text('Save');
-                    }
-                });
-
-                $('#agents-table').on('click', '.agent button', function () {
-                    console.log('button clicked');
-
-                    const role = $(this).closest('.agent').find('input[name="agent-role"]').val();
-                    const output = $(this).closest('.agent').find('input[name="agent-output"]').val();
-
-                    console.log('role:', role, 'output:', output, 'button text:', $(this).text());
-
-                    if ($(this).text() === 'Save' && role && output) {
-                        console.log('sending AJAX request');
-
-                        $.ajax({
-                            url: '/add_agent',
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ role, output }),
-                            success: function (response) {
-                                console.log('AJAX request successful', response);
-                                alert(response.message);
-                            },
-                            error: function (xhr, status, error) {
-                                console.log('AJAX request failed', xhr, status, error);
-                                alert('Error adding agent: ' + xhr.responseText);
-                            }
-                        });
-                    }
-                });
-
-                $('#generate-output').click(function () {
-                    const crewRole = $('#crew-role').val();
-                    const crewPurpose = $('#crew-purpose').val();
-                    const agents = [];
-
-                    for (let i = 1; i <= agentCount; i++) {
-                        const role = $(`#agent-role-${i}`).val();
-                        const output = $(`#agent-output-${i}`).val();
-                        agents.push({ role, output });
-                    }
+                $('#agents-table').on('click', '.save-agent', function () {
+                    const agentId = $(this).attr('id').split('-')[2];
+                    const role = $(`#agent-role-${agentId}`).val();
+                    const output = $(`#agent-output-${agentId}`).val();
 
                     $.ajax({
-                        url: '/generate_output',
+                        url: '/add_agent',
                         method: 'POST',
                         contentType: 'application/json',
-                        data: JSON.stringify({ crewRole, crewPurpose, agents }),
+                        data: JSON.stringify({ role, output }),
                         success: function (response) {
-                            $('#output').attr('href', response.pdf_url).show();
-                            $('#download-pdf').attr('href', response.pdf_url).show();
+                            alert(response.message);
+                            $(`#agent-role-${agentId}`).prop('readonly', true);
+                            $(`#agent-output-${agentId}`).prop('readonly', true);
+                            $(`#save-agent-${agentId}`).text('Edit').removeClass('save-agent').addClass('edit-agent').prop('disabled', false);
                         },
                         error: function (xhr, status, error) {
-                            alert('Error generating output: ' + xhr.responseText);
+                            alert('Error adding agent: ' + xhr.responseText);
                         }
                     });
+                });
+
+                $('#agents-table').on('click', '.edit-agent', function () {
+                    const agentId = $(this).attr('id').split('-')[2];
+                    $(`#agent-role-${agentId}`).prop('readonly', false);
+                    $(`#agent-output-${agentId}`).prop('readonly', false);
+                    $(this).text('Save').removeClass('edit-agent').addClass('save-agent');
+                });
+            });
+
+            $('#generate-output').click(function () {
+                $.ajax({
+                    url: '/generate_output',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    success: function (response) {
+                        setTimeout(function () {
+                            $('#output').show();
+                            $('#download-pdf').attr('href', response.pdf_url).show();
+                        }, 10000); // 10 seconds delay
+                    },
+                    error: function (xhr, status, error) {
+                        alert('Error generating output: ' + xhr.responseText);
+                    }
                 });
             });
         });

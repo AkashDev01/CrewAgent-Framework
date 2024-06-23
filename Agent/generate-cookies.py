@@ -17,4 +17,4 @@ cookies = {
 }
 
 with open('cookies.json', 'w', encoding='utf-8') as f:
-    json.dump(json.dumps(cookies), f)
+    json.dump(cookies, f)
