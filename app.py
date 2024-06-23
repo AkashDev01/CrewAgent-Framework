@@ -3,16 +3,17 @@ from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 import json
 from Agent.create_custom_agent import create_agent
-from Agent.mediator_agent import generate_combined_output, create_pdf
+from Agent.moderator_agent_generate_result import generate_result
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__, template_folder=os.path.join('UI', 'templates'), static_folder=os.path.join('UI', 'static'))
 
-# Run authentication and generate-cookies scripts
+# Run authentication, generate-cookies, and create moderator agent scripts
 os.system('python Agent/authentication.py')
 os.system('python Agent/generate-cookies.py')
+os.system('python Agent/moderator_agent_creation.py')
 
 agent_counter = 0
 agents_data = []
@@ -50,12 +51,9 @@ def add_agent():
 @app.route('/generate_output', methods=['POST'])
 def generate_output():
     data = request.json
-    crewRole = data.get('crewRole')
-    crewPurpose = data.get('crewPurpose')
-    agents = data.get('agents')
+    crew_goal = data.get('crewPurpose')
     
-    combined_output = generate_combined_output(crewRole, crewPurpose, agents)
-    pdf_filename = create_pdf(combined_output)
+    pdf_filename = generate_result(crew_goal, agents_data)
     return jsonify({"message": "PDF generated successfully", "pdf_url": pdf_filename}), 200
 
 if __name__ == '__main__':
