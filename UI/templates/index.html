@@ -1,94 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Crew Agent Framework</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@trimbleinc/modus-bootstrap@1.6.3/dist/modus.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+
 <body>
-    <h1>Crew Agent Framework</h1>
-    <div>
-        <label for="crew-role">Role of the Crew:</label>
-        <input type="text" id="crew-role" name="crew-role">
-    </div>
-    <div id="agents-container">
+    <div class="container">
+        <h1 class="text-center">Crew Agent Framework</h1>
+        <div class="form-group">
+            <label for="crew-role">Role of the Crew:</label>
+            <input class="form-control" type="text" id="crew-role" name="crew-role">
+        </div>
+        <div class="form-group">
+            <label for="crew-purpose">What is the Crew for?</label>
+            <textarea class="form-control" id="crew-purpose" name="crew-purpose" rows="4"></textarea>
+        </div>
         <h2>Agents</h2>
-        <div class="agent" id="agent-1">
-            <label for="agent-role-1">Role of Agent:</label>
-            <input type="text" id="agent-role-1" name="agent-role">
-            <label for="agent-output-1">Output Expected:</label>
-            <input type="text" id="agent-output-1" name="agent-output">
+        <table class="table table-bordered" id="agents-table">
+            <thead class="bg-gray-light">
+                <tr>
+                    <th scope="col">Agent ID</th>
+                    <th scope="col">Role of Agent</th>
+                    <th scope="col">Output Expected</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Agents will be added here dynamically -->
+            </tbody>
+        </table>
+        <button class="btn btn-primary" id="add-agent">Add Agent</button>
+        <button class="btn btn-primary" id="generate-output">Generate Output</button>
+        <div id="output" style="display: none;">
+            <h2>Crew Output</h2>
+            <a id="download-pdf" href="#" style="display: none;">Download PDF</a>
         </div>
     </div>
-    <button id="add-agent">Add Agent</button>
-    <div>
-        <label for="crew-purpose">What is the Crew for?</label>
-        <textarea id="crew-purpose" name="crew-purpose" rows="4" cols="50"></textarea>
-    </div>
-    <button id="generate-output">Generate Output</button>
-    <div id="output">
-        <h2>Crew Output</h2>
-        <a id="download-pdf" href="#" style="display: none;">Download PDF</a>
-    </div>
     <script>
-        let agentCount = 1;
+        let agentCount = 0;
 
-        $(document).ready(function() {
-            $('#add-agent').click(function() {
+        $(document).ready(function () {
+            $('#add-agent').click(function () {
                 agentCount++;
-                $('#agents-container').append(`
-                    <div class="agent" id="agent-${agentCount}">
-                        <label for="agent-role-${agentCount}">Role of Agent:</label>
-                        <input type="text" id="agent-role-${agentCount}" name="agent-role">
-                        <label for="agent-output-${agentCount}">Output Expected:</label>
-                        <input type="text" id="agent-output-${agentCount}" name="agent-output">
-                    </div>
+                $('#agents-table tbody').append(`
+                    <tr id="agent-${agentCount}">
+                        <td>${agentCount}</td>
+                        <td><input class="form-control agent-input" type="text" id="agent-role-${agentCount}" name="agent-role"></td>
+                        <td><input class="form-control agent-input" type="text" id="agent-output-${agentCount}" name="agent-output"></td>
+                        <td><button class="btn btn-secondary edit-agent" id="edit-agent-${agentCount}" disabled>Save</button></td>
+                    </tr>
                 `);
-            });
 
-            $('#agents-container').on('focusout', '.agent input', function() {
-                const role = $(this).closest('.agent').find('input[name="agent-role"]').val();
-                const output = $(this).closest('.agent').find('input[name="agent-output"]').val();
+                $(`#agent-role-${agentCount}, #agent-output-${agentCount}`).on('input', function () {
+                    let roleInput = $(`#agent-role-${agentCount}`).val();
+                    let outputInput = $(`#agent-output-${agentCount}`).val();
+                    if (roleInput && outputInput) {
+                        $(`#edit-agent-${agentCount}`).prop('disabled', false);
+                    } else {
+                        $(`#edit-agent-${agentCount}`).prop('disabled', true);
+                    }
+                });
 
-                if (role && output) {
+                $(`#edit-agent-${agentCount}`).click(function () {
+                    let roleInput = $(`#agent-role-${agentCount}`);
+                    let outputInput = $(`#agent-output-${agentCount}`);
+                    let editButton = $(this);
+
+                    if (editButton.text() === 'Save') {
+                        roleInput.prop('readonly', true);
+                        outputInput.prop('readonly', true);
+                        editButton.text('Edit');
+                    } else {
+                        roleInput.prop('readonly', false);
+                        outputInput.prop('readonly', false);
+                        editButton.text('Save');
+                    }
+                });
+
+                $('#agents-table').on('click', '.agent button', function () {
+                    console.log('button clicked');
+
+                    const role = $(this).closest('.agent').find('input[name="agent-role"]').val();
+                    const output = $(this).closest('.agent').find('input[name="agent-output"]').val();
+
+                    console.log('role:', role, 'output:', output, 'button text:', $(this).text());
+
+                    if ($(this).text() === 'Save' && role && output) {
+                        console.log('sending AJAX request');
+
+                        $.ajax({
+                            url: '/add_agent',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ role, output }),
+                            success: function (response) {
+                                console.log('AJAX request successful', response);
+                                alert(response.message);
+                            },
+                            error: function (xhr, status, error) {
+                                console.log('AJAX request failed', xhr, status, error);
+                                alert('Error adding agent: ' + xhr.responseText);
+                            }
+                        });
+                    }
+                });
+
+                $('#generate-output').click(function () {
+                    const crewRole = $('#crew-role').val();
+                    const crewPurpose = $('#crew-purpose').val();
+                    const agents = [];
+
+                    for (let i = 1; i <= agentCount; i++) {
+                        const role = $(`#agent-role-${i}`).val();
+                        const output = $(`#agent-output-${i}`).val();
+                        agents.push({ role, output });
+                    }
+
                     $.ajax({
-                        url: '/add_agent',
+                        url: '/generate_output',
                         method: 'POST',
                         contentType: 'application/json',
-                        data: JSON.stringify({ role, output }),
-                        success: function(response) {
-                            alert(response.message);
+                        data: JSON.stringify({ crewRole, crewPurpose, agents }),
+                        success: function (response) {
+                            $('#output').attr('href', response.pdf_url).show();
+                            $('#download-pdf').attr('href', response.pdf_url).show();
                         },
-                        error: function(xhr, status, error) {
-                            alert('Error adding agent: ' + xhr.responseText);
+                        error: function (xhr, status, error) {
+                            alert('Error generating output: ' + xhr.responseText);
                         }
                     });
-                }
-            });
-
-            $('#generate-output').click(function() {
-                const crewRole = $('#crew-role').val();
-                const crewPurpose = $('#crew-purpose').val();
-                const agents = [];
-
-                for (let i = 1; i <= agentCount; i++) {
-                    const role = $(`#agent-role-${i}`).val();
-                    const output = $(`#agent-output-${i}`).val();
-                    agents.push({ role, output });
-                }
-
-                $.ajax({
-                    url: '/generate_output',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ crewRole, crewPurpose, agents }),
-                    success: function(response) {
-                        $('#download-pdf').attr('href', response.pdf_url).show();
-                    }
                 });
             });
         });
     </script>
 </body>
+
 </html>
